@@ -1,1 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@400;700&display=swap');
 
+body {
+    font-family: 'Fredoka', sans-serif;
+}
+
+.book-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.book-card:hover {
+    transform: scale(1.05) rotate(2deg);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.story-text {
+    font-family: 'Comic Neue', cursive;
+    font-size: 1.2rem;
+    line-height: 1.8;
+}
+
+/* More styles for navigation underline, etc. */
