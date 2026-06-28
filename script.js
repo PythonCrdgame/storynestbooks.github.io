@@ -92,6 +92,7 @@ let readingProgress = {};
 // Render books with enhanced cards
 function renderBooks(containerId, bookList) {
     const container = document.getElementById(containerId);
+    if (!container) return;
     container.innerHTML = '';
     
     bookList.forEach(book => {
@@ -129,12 +130,14 @@ function openBook(bookId) {
     if (!currentBook) return;
     
     currentPageIndex = 0;
-    document.getElementById('reader-modal').classList.remove('hidden');
-    document.getElementById('reader-title').textContent = currentBook.title;
+    const readerModal = document.getElementById('reader-modal');
+    if (readerModal) readerModal.classList.remove('hidden');
+    const readerTitle = document.getElementById('reader-title');
+    if (readerTitle) readerTitle.textContent = currentBook.title;
     updateReaderPage();
     
     const favBtn = document.getElementById('reader-fav-btn');
-    favBtn.textContent = favorites.includes(currentBook.id) ? '❤️' : '♡';
+    if (favBtn) favBtn.textContent = favorites.includes(currentBook.id) ? '❤️' : '♡';
     
     // Mark as started
     if (!readingProgress[currentBook.id]) {
@@ -144,11 +147,13 @@ function openBook(bookId) {
 }
 
 function updateReaderPage() {
+    if (!currentBook) return;
     const contentEl = document.getElementById('reader-content');
-    contentEl.innerHTML = `<p class="mb-8">${currentBook.pages[currentPageIndex]}</p>`;
+    if (contentEl) contentEl.innerHTML = `<p class="mb-8">${currentBook.pages[currentPageIndex]}</p>`;
     
     const progress = Math.round(((currentPageIndex + 1) / currentBook.pages.length) * 100);
-    document.getElementById('page-info').innerHTML = `
+    const pageInfo = document.getElementById('page-info');
+    if (pageInfo) pageInfo.innerHTML = `
         Page <span class="font-bold">${currentPageIndex + 1}</span> of ${currentBook.pages.length}
         <span class="text-emerald-500 ml-3">• ${progress}% read</span>
     `;
@@ -159,6 +164,7 @@ function updateReaderPage() {
 }
 
 function nextPage() {
+    if (!currentBook) return;
     if (currentPageIndex < currentBook.pages.length - 1) {
         currentPageIndex++;
         updateReaderPage();
@@ -168,6 +174,7 @@ function nextPage() {
 }
 
 function prevPage() {
+    if (!currentBook) return;
     if (currentPageIndex > 0) {
         currentPageIndex--;
         updateReaderPage();
@@ -175,7 +182,8 @@ function prevPage() {
 }
 
 function closeReader() {
-    document.getElementById('reader-modal').classList.add('hidden');
+    const readerModal = document.getElementById('reader-modal');
+    if (readerModal) readerModal.classList.add('hidden');
     if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
 
@@ -194,7 +202,7 @@ function speakCurrentPage() {
 }
 
 function toggleFavorite(bookId) {
-    event.stopImmediatePropagation();
+    if (typeof event !== 'undefined' && event.stopImmediatePropagation) event.stopImmediatePropagation();
     if (favorites.includes(bookId)) {
         favorites = favorites.filter(id => id !== bookId);
     } else {
@@ -206,9 +214,10 @@ function toggleFavorite(bookId) {
 }
 
 function toggleFavoriteInReader() {
+    if (!currentBook) return;
     toggleFavorite(currentBook.id);
     const favBtn = document.getElementById('reader-fav-btn');
-    favBtn.textContent = favorites.includes(currentBook.id) ? '❤️' : '♡';
+    if (favBtn) favBtn.textContent = favorites.includes(currentBook.id) ? '❤️' : '♡';
 }
 
 // Other functions (filter, search, nav, auth, etc.) remain similar but enhanced...
@@ -220,7 +229,8 @@ function filterCategory(category) {
 }
 
 function searchBooks() {
-    const term = document.getElementById('search-input').value.toLowerCase().trim();
+    const input = document.getElementById('search-input');
+    const term = input ? input.value.toLowerCase().trim() : '';
     if (!term) {
         renderBooks('books-grid', books);
         return;
@@ -232,7 +242,63 @@ function searchBooks() {
     renderBooks('books-grid', results);
 }
 
-// ... (rest of auth, toast, save/load functions as before)
+// Persistent storage helpers (fixes the undefined localData error)
+function loadData() {
+    try {
+        const raw = localStorage.getItem('kiddoData');
+        if (!raw) {
+            favorites = [];
+            readingProgress = {};
+            currentUser = null;
+            return;
+        }
+        const parsed = JSON.parse(raw);
+        favorites = Array.isArray(parsed.favorites) ? parsed.favorites : [];
+        readingProgress = typeof parsed.readingProgress === 'object' && parsed.readingProgress !== null ? parsed.readingProgress : {};
+        currentUser = parsed.currentUser || null;
+    } catch (err) {
+        console.error('Failed to load saved data:', err);
+        favorites = [];
+        readingProgress = {};
+        currentUser = null;
+    }
+}
+
+function saveData() {
+    try {
+        const payload = { favorites, readingProgress, currentUser };
+        localStorage.setItem('kiddoData', JSON.stringify(payload));
+    } catch (err) {
+        console.error('Failed to save data:', err);
+    }
+}
+
+// Lightweight UI helpers to avoid additional runtime errors
+function navigateTo(sectionId) {
+    // Hide sections marked with data-section and show the requested one if present
+    const sections = document.querySelectorAll('[data-section]');
+    sections.forEach(s => s.classList.add('hidden'));
+    const target = document.getElementById(sectionId);
+    if (target) target.classList.remove('hidden');
+}
+
+function refreshCurrentView() {
+    // Re-render common lists if they exist
+    if (document.getElementById('featured-books')) renderBooks('featured-books', books.slice(0, 4));
+    if (document.getElementById('books-grid')) renderBooks('books-grid', books);
+    if (document.getElementById('favorites-grid')) renderBooks('favorites-grid', books.filter(b => favorites.includes(b.id)));
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) {
+        console.log('Toast:', message);
+        return;
+    }
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+}
 
 function init() {
     loadData();
